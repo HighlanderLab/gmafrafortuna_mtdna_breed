@@ -36,7 +36,6 @@ varP = sd^2
 varA = varP*0.25
 varM = varP*0.05
 varPe = varP*0.1 
-#varH = varP*0.2
 varE = varP*0.6
 # lactation means (Kg)
 mLac1 = 6733; mLac2 = 7440; mLac3 = 7344; mLac4 = 7482; mLac5 = 7168
@@ -95,7 +94,6 @@ recording <- function(datafile, mtdna, pop){
                           Selection  = selection,
                           IId        = pop@id,
                           Sex        = pop@sex,
-#                          Herd       = if(generation==0){hd}else{with(datafile, Herd[match(pop@mother, datafile$IId)])},
                           FId        = pop@father,
                           MId        = pop@mother,
                           ML         = if(generation==0){id}else{with(datafile, ML[match(pop@mother, datafile$IId)])},
@@ -229,7 +227,7 @@ runCovars <- function(datafile, recfile, pop){
 } 
 
 # RENUMF90 function
-runRENUM = function(datafile){
+runRENUM = function(datafile, mtdna_ids, pogram, model){
   # create pedigree file
   pedFile <- datafile[, c("IId", "FId", "MId")]
   write.table(pedFile, "Blupf90.ped", quote = FALSE, row.names = FALSE, col.names = FALSE, sep = " ", na="0")
@@ -245,8 +243,13 @@ runRENUM = function(datafile){
                                           ifelse(phenoFile$Lactation == 4, phenoFile$Pheno4, phenoFile$Pheno5))))
   
   phenoFile <- phenoFile[, c("IId", "Pheno", "Lactation", "ML")]
-  write.table(phenoFile, "Blupf901.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep = " ", na = "0", append = TRUE)
-  rm(phenoFile)
+  
+  # Join mtDNA cross-ref file with data file
+  # Check if inner_join is correct and if it deals with repetitions, etc...
+  pheno_export = inner_join(phenoFile, mtdna_ids, by = c("ML" = "mt_id"))
+ 
+  write.table(pheno_export, "Blupf901.dat", quote = FALSE, row.names = FALSE, col.names = FALSE, sep = " ", na = "0", append = TRUE)
+  rm(phenoFile, pheno_export)
   
   # insert variance components into parameter file
   system(paste0('sed "s/varE/', varE, '/g" renumf900.par > renumf901.par'))
@@ -255,27 +258,18 @@ runRENUM = function(datafile){
   file.remove("renumf901.par")
   system(paste0('sed "s/varPe/', varPe, '/g" renumf902.par > renumf903.par'))
   file.remove("renumf902.par")
-  if("mt" %in% datafile$Model){
+  if("PED" %in% datafile$Program & "mt" %in% datafile$Model){
     system(paste0('sed "s/varM/', varM, '/g" renumf903.par > renumf90.par'))
   }else{
     file.copy("renumf903.par", "renumf90.par")
   }
   file.remove("renumf903.par")
   
-  
   # call RENUMF90
   system(command = "echo renumf90.par | $HOME/bin/renumf90 | tee renum.log")
   
-  if("GEN" %in% datafile$Program & "mt" %in% datafile$Model){
-    system(command = "sed -i '' '40i\\'$'\\n''mtdnaGinv.txt' renf90.par") # macos
-    #system(command = "sed -i '40i''mtdnaGinv.txt' renf90.par") # linux
-    #system(command = "sed -i '41d' renf90.par") # remove extra line
-    
-    # insert Ginv file name into correct place
-    system(command="awk '/diagonal/{count++;if(count==2){sub(\"diagonal\",\"user_file\")}}1' renf90.par > renf901.par")
-    # replace second occurrence of diagonal to user_file
-    file.remove("renf90.par")
-    file.rename("renf901.par", "renf90.par")
+  if(program == "GEN" & model == "mt"){
+    system(command = "sh mtdnarenf90.sh")
   }
 }
 
@@ -411,6 +405,29 @@ fi
 ")
 sink()
 
+# modify renf90.par to include mitochondrial effect
+sink("mtdnarenf90.sh", type="output")
+writeLines("#!/bin/bash
+# Correct renf90.par for mtdna
+# first - overwrite line 7 (3 --> 4)           
+awk 'NR==7 {$0=\"    4\"}1' renf90.par > tmp1.par
+rm renf90.par
+
+# On line 16 - add new effect and levels
+awk 'NR==16 { print \" 5        100 cross\";}1' tmp1.par > tmp2.par
+rm tmp1.par
+
+# Add block text to line 35
+awk 'NR==35 { print \" RANDOM_TYPE|END|user_file|END|FILE|END|mtdnaGinv.txt|END|(CO)VARIANCES|END|100 \" ;}1' tmp2.par > tmp3.par
+#awk 'NR==35 { print \" RANDOM_TYPE,user_file,FILE,mtdnaGinv.txt,(CO)VARIANCES,100 \" ;}1' tmp2.par > tmp3.par
+rm tmp2.par
+
+# Break into different lines
+sed 's/|END|/\\n/g' tmp3.par > renf90.par
+rm tmp3.par
+")
+sink()
+
 # Create Initial mtDNA Ginv matrix
 mtdnaGinv <- function(mtdnaPop, simParam){
   M = pullSnpGeno(pop=mtdnaPop, simParam=simParam)
@@ -433,6 +450,10 @@ mtdnaGinv <- function(mtdnaPop, simParam){
   #G31 = as(Ginv, "dsTMatrix")
   G32 = summary(G31)
   write.table(G32, file = "mtdnaGinv.txt", row.names = FALSE, col.names = FALSE)
+  
+  # Create cross-ref file based on the exported rownames
+  # this will deal with the correction of ML_ids during BLUP estimations
+  mt_ref <<- tibble(mt_id = rownames(Z), mt_new_id = seq(1:length(mt_id)))
 }
 
 
@@ -446,8 +467,8 @@ Blupf901.dat
 TRAITS
 2
 FIELDS_PASSED TO OUTPUT
-1
-#original_id
+1 4 5
+#original_id mtdna_original_id mtdna_order_covariances
 WEIGHT(S)
   
 RESIDUAL_VARIANCE
@@ -483,8 +504,8 @@ Blupf901.dat
 TRAITS
 2
 FIELDS_PASSED TO OUTPUT
-1
-#original_id
+1 4 5
+#original_id mtdna_original_id mtdna_order_covariances
 WEIGHT(S)
 
 RESIDUAL_VARIANCE
@@ -527,8 +548,8 @@ Blupf901.dat
 TRAITS
 2
 FIELDS_PASSED TO OUTPUT
-1
-#original_id
+1 4 5
+#original_id mtdna_original_id mtdna_order_covariances
 WEIGHT(S)
 
 RESIDUAL_VARIANCE
@@ -568,8 +589,8 @@ Blupf901.dat
 TRAITS
 2
 FIELDS_PASSED TO OUTPUT
-1
-#original_ids
+1 4 5
+#original_id mtdna_original_id mtdna_order_covariances
 WEIGHT(S)
 
 RESIDUAL_VARIANCE
@@ -596,13 +617,6 @@ pedigree
 varA
 (CO)VARIANCES_PE
 varPe
-EFFECT
-4 cross alpha
-#ml
-RANDOM
-diagonal
-(CO)VARIANCES
-varM
 OPTION use_yams
 OPTION no_quality_control
 OPTION thrStopCorAG 0

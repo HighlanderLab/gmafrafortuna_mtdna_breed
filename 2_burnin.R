@@ -23,6 +23,7 @@ mtDNA <- selectInd(mtDNA, nInd = nrow(mtfile), simParam = if(traitScen=="maxQTL"
 
 # Generate mtDNA inverse matrix based on trait scenario
 cat("Generating mtDNA inverse matrix...\n")
+mt_ref = NULL
 mtdnaGinv(mtDNA, if(traitScen=="maxQTL"){SP2}else{SP3})
 
 # ------------------------------------------------------------------------------------------------------------------------
@@ -114,7 +115,7 @@ Records <- recording(Records, mtfile,
 
 # Estimate breeding values to start evaluation scenario
 preparePAR(paste0(program, model))
-runRENUM(Records)
+runRENUM(Records, mt_ref, program, model)
 Records = runBLUP(Records)
 #file.remove("Blupf901.dat")
 
