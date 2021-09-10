@@ -1,72 +1,79 @@
-# mtDNA Project: Should mitochondrial variation be accounted for on BVE
-# Dairy Cattle Breeding Simulations
-# Roslin Institute
-# from July 2020
-# Create Founder Haplotypes (nuclear and mitochondrial)
-
-#library(AlphaSimR)
-#library(tidyverse)
-#library(Matrix)
-
-# Simulating nuclear genome
-cat("Simulating nuclear genome...\n")
-FOUNDERPOP <- runMacs(nInd = nInd*2,
+# Evaluation of the impact of accounting for mitochondrial variation on breeding values estimation for dairy cattle
+# Gabriela Mafra Fortuna
+# Highlander Lab
+# The Roslin Institute 
+# July 2020 - updated Aug 2021
+# ------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------- Generate initial haplotypes & nuclear founder pop ----------------------------------- 
+# ---------------------------------- Nuclear ----------------------------------- 
+cat("Simulating nuclear haplotypes...\n")
+FOUNDERPOP <- runMacs(nInd = nFem*2,
                       nChr = nChr,
                       segSites = nQtl+nSnp,
                       species = "CATTLE",
                       ploidy = 2L)
 
 SP = SimParam$new(FOUNDERPOP)$
-   restrSegSites(nQtl, nSnp, overlap=FALSE)$
-   addTraitA(nQtlPerChr=nQtl, mean = 0, var = varA)$
-   setSexes("yes_sys")$
-   addSnpChip(nSnp)
+  restrSegSites(nQtl, nSnp, overlap=FALSE)$
+  addTraitA(nQtlPerChr=nQtl, mean=0, var=varA)$
+  setSexes("yes_sys")$
+  addSnpChip(nSnp)
+
+cat("Simulating founder population...\n")
 founders <- newPop(FOUNDERPOP)
+rm(FOUNDERPOP)
 
-
-# Simulating mtDNA 
-cat("Simulating mitogenome...\n")
+# ---------------------------------- Mitochondrial -----------------------------------
+cat("Simulating mitochondrial haplotypes...\n")
 i = 0
-while (i < 400 ) {
-   mtDNA = runMacs2(nInd=mtInd, nChr=1, 
-                    Ne= mNe,
-                    bp=16202,
-                    genLen = 0,
-                    mutRate = mu, 
-                    histNe = histMtNe,
-                    histGen = histMtGen,
-                    ploidy=1)
-   i = mtDNA@nLoci
+while(i < 400){
+  mtDNA = runMacs2(nInd = mtInd, 
+                   nChr = 1,
+                   Ne = mNe,
+                   bp = 16202,
+                   genLen = 0,
+                   mutRate = mu,
+                   histNe = histMtNe,
+                   histGen = histMtGen,
+                   ploidy = 1)
+  i = mtDNA@nLoci
 }
 
-mtDNA_sv = mtDNA
-# solution to run different scenarios
+# Qtl and Snp par depending on scenario
+mQtlmax = i
+mSnpmax = mQtlmax
 
-mQtl = i
-mSnp = mQtl
-      
+mQtlmin = 1
+mSnpmin = i
+
 SP2 = SimParam$new(mtDNA)$
-      restrSegSites(overlap=TRUE)$
-      addTraitA(nQtlPerChr = mQtl, mean = 0, var=varM)$ 
-      addSnpChip(nSnpPerChr = mSnp)
-mtDNA <- newPop(mtDNA, simParam=SP2)
-      
-# store haplotyopes, define maternal lineages and haploGroups
-mtfile <- as.matrix(pullSegSiteHaplo(mtDNA, simParam = SP2))
-mtfile <- as.data.frame(mtfile)
-mtfile <- mtfile %>% unite(haplotype, 1:length(mtfile), sep = "")
-      
-#sum(!duplicated(mtfile))
-y <- unique(mtfile)
+  restrSegSites(overlap=TRUE)$
+  addTraitA(nQtlPerChr=mQtlmax, mean = 0, var = varM)$
+  addSnpChip(nSnpPerChr = mSnpmax)
 
-y <- rownames_to_column(y, "haploGroup")
+SP3 = SimParam$new(mtDNA)$
+  restrSegSites(overlap=TRUE)$
+  addTraitA(nQtlPerChr=mQtlmin, mean = 0, var = varM)$
+  addSnpChip(nSnpPerChr = mSnpmin)
 
-mtfile <- mtfile %>% mutate(HaploGroup = with(y, haploGroup[match(mtfile$haplotype,  y$haplotype)]), 
-                                     ML = mtDNA@id, mTbv = mtDNA@gv)
-
-mtfile <- mtfile %>% filter(!duplicated(HaploGroup)) %>% select(-HaploGroup)
-
-mtDNA <- selectInd(mtDNA, nInd = nrow(mtfile), simParam = SP2, candidates = mtfile$ML, use="rand")
-rm(y)
-
+cat("Saving data as 'founders.RData'...\n")
 save.image("founders.RData")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
