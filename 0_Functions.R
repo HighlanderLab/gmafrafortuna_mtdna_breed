@@ -227,7 +227,7 @@ runCovars <- function(datafile, recfile, pop){
 } 
 
 # RENUMF90 function
-runRENUM = function(datafile, mtdna_ids, pogram, model){
+runRENUM = function(datafile, mtdna_ids){
   # create pedigree file
   pedFile <- datafile[, c("IId", "FId", "MId")]
   write.table(pedFile, "Blupf90.ped", quote = FALSE, row.names = FALSE, col.names = FALSE, sep = " ", na="0")
@@ -268,7 +268,7 @@ runRENUM = function(datafile, mtdna_ids, pogram, model){
   # call RENUMF90
   system(command = "echo renumf90.par | $HOME/bin/renumf90 | tee renum.log")
   
-  if(program == "GEN" & model == "mt"){
+  if(!(missing(mtdna_ids))){
     system(command = "sh mtdnarenf90.sh")
   }
 }
@@ -314,7 +314,7 @@ varComp <- function(model){
 }
  
 # run BLUPF90 function
-runBLUP = function(datafile){
+runBLUP = function(datafile, mtdna_ids){
   system(command = "echo renf90.par | $HOME/bin/blupf90 | tee blup.log")
   # run BLUPF90
   
@@ -342,24 +342,18 @@ runBLUP = function(datafile){
   datafile$nEbv <- nebv$value 
   
   # Extract mEBV from file (only mt models)
-  if(4 %in% sol$Effect){
+  if(!(missing(mtdna_ids))){
     mebv = sol %>% 
       filter(Trait == 1 & Effect == 4) %>%
       select("Level", "Solution")
     
-    # retrieve level coding
-    system(command = "awk '/Effect group 4/ {matched = 1} matched' renf90.tables > newfile")
-    renum <- read_table2("newfile", col_names=FALSE, skip = 2,
-                         col_types = cols(.default = col_double(),
-                                          X1 = col_double(),
-                                          X2 = col_double(),
-                                          X3 = col_double()))
+    # "mebv" has results for 100 mtdnas - RETRIEVE CORRECT IDS TO MATCH RESULTS
     
-    mebv <- merge(renum, mebv, by.x="X3", by.y="Level")
-    # level = renumbered values (ids)
+    # retrieve level coding - solutions with new and original ids
+    mtresult <- inner_join(mebv, mtdna_ids, by = c("Level" = "mt_new_id"))
     
     # Update mito breeding values in database: compare col1 with ML (X1 = original ids)
-    mebv <- as_tibble(with(mebv, Solution[match(datafile$ML, mebv$X1)]))
+    mebv <- as_tibble(with(mebv, Solution[match(datafile$ML, mtresult$mt_id)]))
     mebv <- mebv %>% replace(is.na(.), 0)
     datafile$mEbv <- mebv$value
   }
@@ -414,11 +408,11 @@ awk 'NR==7 {$0=\"    4\"}1' renf90.par > tmp1.par
 rm renf90.par
 
 # On line 16 - add new effect and levels
-awk 'NR==16 { print \" 5        100 cross\";}1' tmp1.par > tmp2.par
+awk 'NR==16 { print \" 6        100 cross\";}1' tmp1.par > tmp2.par
 rm tmp1.par
 
 # Add block text to line 35
-awk 'NR==35 { print \" RANDOM_TYPE|END|user_file|END|FILE|END|mtdnaGinv.txt|END|(CO)VARIANCES|END|100 \" ;}1' tmp2.par > tmp3.par
+awk 'NR==35 { print \" RANDOM_GROUP|END|4|END|RANDOM_TYPE|END|user_file|END|FILE|END|mtdnaGinv.txt|END|(CO)VARIANCES|END|178605 \" ;}1' tmp2.par > tmp3.par
 #awk 'NR==35 { print \" RANDOM_TYPE,user_file,FILE,mtdnaGinv.txt,(CO)VARIANCES,100 \" ;}1' tmp2.par > tmp3.par
 rm tmp2.par
 

@@ -184,7 +184,7 @@ for(i in (generation+1):((generation+1)+nBreeding)){
   
   # run evaluation
   preparePAR(paste0(program, model))
-  runRENUM(Records)
+  runRENUM(Records, mt_ref, program, model)
   Records = runBLUP(Records)
   
   pop$heifers[[1]]@ebv <- as.matrix(with(Records, 
