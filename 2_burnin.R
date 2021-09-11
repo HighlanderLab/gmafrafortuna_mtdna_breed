@@ -115,7 +115,7 @@ Records <- recording(Records, mtfile,
 
 # Estimate breeding values to start evaluation scenario
 preparePAR(paste0(program, model))
-runRENUM(Records, mt_ref, program, model)
+runRENUM(Records)
 Records = runBLUP(Records)
 #file.remove("Blupf901.dat")
 
