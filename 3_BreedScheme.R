@@ -17,7 +17,7 @@ if(program=="GEN"){
 }
 
 for(i in (generation+1):((generation+1)+nBreeding)){
-  cat("Breeding generation", i, "Replicate ", run, "...\n",
+  cat("Breeding generation", i, "...\n",
       "Program:", program, "Model:", model, "Selection:", selection, "Scenario:", traitScen, "\n")
   
   # define matings for each category:
@@ -89,9 +89,12 @@ for(i in (generation+1):((generation+1)+nBreeding)){
   
   # run evaluation
   preparePAR(paste0(program, model))
-  runRENUM(Records, mt_ref)
+  runRENUM(Records, mt_ref, program, model)
   #varComp(model)
-  Records = runBLUP(Records)
+  Records = runBLUP(Records, if(program=="GEN" & model=="mt"){mt_ref})
+  
+  
+  Records = runBLUP(Records, mtdna_ids = (if(program=="GEN" & model=="mt"){mt_ref}else{NULL}))
   
   pop$heifers[[1]]@ebv <- as.matrix(with(Records,
                                          if(selection=="baseline"){nEbv[match(pop$heifers[[1]]@id, 

@@ -227,7 +227,7 @@ runCovars <- function(datafile, recfile, pop){
 } 
 
 # RENUMF90 function
-runRENUM = function(datafile, mtdna_ids){
+runRENUM = function(datafile, mtdna_ids, program, model){
   # create pedigree file
   pedFile <- datafile[, c("IId", "FId", "MId")]
   write.table(pedFile, "Blupf90.ped", quote = FALSE, row.names = FALSE, col.names = FALSE, sep = " ", na="0")
@@ -268,9 +268,7 @@ runRENUM = function(datafile, mtdna_ids){
   # call RENUMF90
   system(command = "echo renumf90.par | $HOME/bin/renumf90 | tee renum.log")
   
-  if(!(missing(mtdna_ids))){
-    system(command = "sh mtdnarenf90.sh")
-  }
+  if(program=="GEN" & model=="mt"){system(command = "sh mtdnarenf90.sh")}
 }
 
 # AIREMLF90 function
@@ -342,7 +340,9 @@ runBLUP = function(datafile, mtdna_ids){
   datafile$nEbv <- nebv$value 
   
   # Extract mEBV from file (only mt models)
-  if(!(missing(mtdna_ids))){
+  if(is.null(mtdna_ids)){
+    datafile <- datafile %>% mutate(tEbv = nEbv)
+    }else{
     mebv = sol %>% 
       filter(Trait == 1 & Effect == 4) %>%
       select("Level", "Solution")
@@ -355,10 +355,12 @@ runBLUP = function(datafile, mtdna_ids){
     # Update mito breeding values in database: compare col1 with ML (X1 = original ids)
     mebv <- as_tibble(with(mebv, Solution[match(datafile$ML, mtresult$mt_id)]))
     mebv <- mebv %>% replace(is.na(.), 0)
-    datafile$mEbv <- mebv$value
+    datafile$mEbv <- mebv$value 
+    
+    datafile <- datafile %>% mutate(tEbv = nEbv + mEbv)
   }
-  
-  datafile <- datafile %>% mutate(tEbv = nEbv + mEbv)
+
+  #  datafile$tEbv <- sum(datafile$nEbv, datafile$mEbv)
   
   return(datafile)
 }

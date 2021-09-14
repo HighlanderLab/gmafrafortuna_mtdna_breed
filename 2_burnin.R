@@ -115,14 +115,14 @@ Records <- recording(Records, mtfile,
 
 # Estimate breeding values to start evaluation scenario
 preparePAR(paste0(program, model))
-runRENUM(Records)
+runRENUM(Records, mt_ref, program, model)
 Records = runBLUP(Records)
 #file.remove("Blupf901.dat")
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------ Run Burn-in generations -----------------------------------------------
 for(i in (generation+1):((generation+1)+nBreeding)){
-  cat("Burn-in generation", i, "Replicate ", run, "...\n")
+  cat("Burn-in generation", i, "...\n")
   
   # define matings for each category:
   dams <- do.call(c, unlist(pop$eliteDams, recursive = FALSE))
@@ -320,7 +320,7 @@ Records <- Records %>% filter(Generation >= generation-10)
 Records <- Records %>% mutate(gv_corr = nTbv - mean(nTbv))
 gv <- mean(Records$nTbv)
 
-save.image("burnin.RData")
+
 
 
 
