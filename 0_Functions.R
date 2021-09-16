@@ -256,19 +256,21 @@ runRENUM = function(datafile, mtdna_ids, program, model){
   file.remove("renumf900.par")
   system(paste0('sed "s/varA/', varA, '/g" renumf901.par > renumf902.par'))
   file.remove("renumf901.par")
-  system(paste0('sed "s/varPe/', varPe, '/g" renumf902.par > renumf903.par'))
+  system(paste0('sed "s/varPe/', varPe, '/g" renumf902.par > renumf90.par'))
   file.remove("renumf902.par")
-  if("PED" %in% datafile$Program & "mt" %in% datafile$Model){
-    system(paste0('sed "s/varM/', varM, '/g" renumf903.par > renumf90.par'))
-  }else{
-    file.copy("renumf903.par", "renumf90.par")
-  }
-  file.remove("renumf903.par")
   
   # call RENUMF90
   system(command = "echo renumf90.par | $HOME/bin/renumf90 | tee renum.log")
   
-  if(program=="GEN" & model=="mt"){system(command = "sh mtdnarenf90.sh")}
+  if(model=="mt"){
+    # On line 16 - add new effect and levels
+    nML <- as.numeric(nrow(mtdna_ids))
+    system(command="awk 'NR==16 { print \" 6        nML cross\";}1' renf90.par > tmp1.par")
+    system(paste0('sed "s/nML/', nML,'/g" tmp1.par > tmp.par '))
+    file.remove("tmp1.par", "renf90.par")
+    
+    if(program=="GEN"){system(command = "sh mtdnarenf90.sh")}else{system(command="sh pedmtdnarenf90.sh")}
+    }
 }
 
 # AIREMLF90 function
@@ -312,7 +314,7 @@ varComp <- function(model){
 }
  
 # run BLUPF90 function
-runBLUP = function(datafile, mtdna_ids){
+runBLUP = function(datafile, mtdna_ids = NULL){
   system(command = "echo renf90.par | $HOME/bin/blupf90 | tee blup.log")
   # run BLUPF90
   
@@ -406,21 +408,33 @@ sink("mtdnarenf90.sh", type="output")
 writeLines("#!/bin/bash
 # Correct renf90.par for mtdna
 # first - overwrite line 7 (3 --> 4)           
-awk 'NR==7 {$0=\"    4\"}1' renf90.par > tmp1.par
-rm renf90.par
-
-# On line 16 - add new effect and levels
-awk 'NR==16 { print \" 6        100 cross\";}1' tmp1.par > tmp2.par
-rm tmp1.par
+awk 'NR==7 {$0=\"    4\"}1' tmp.par > tmp1.par
+rm tmp.par
 
 # Add block text to line 35
-awk 'NR==35 { print \" RANDOM_GROUP|END|4|END|RANDOM_TYPE|END|user_file|END|FILE|END|mtdnaGinv.txt|END|(CO)VARIANCES|END|178605 \" ;}1' tmp2.par > tmp3.par
-#awk 'NR==35 { print \" RANDOM_TYPE,user_file,FILE,mtdnaGinv.txt,(CO)VARIANCES,100 \" ;}1' tmp2.par > tmp3.par
-rm tmp2.par
+awk 'NR==35 { print \" RANDOM_GROUP|END|4|END|RANDOM_TYPE|END|user_file|END|FILE|END|mtdnaGinv.txt|END|(CO)VARIANCES|END|178605 \" ;}1' tmp1.par > tmp2.par
+rm tmp1.par
 
 # Break into different lines
-sed 's/|END|/\\n/g' tmp3.par > renf90.par
-rm tmp3.par
+sed 's/|END|/\\n/g' tmp2.par > renf90.par
+rm tmp2.par
+")
+sink()
+
+sink("pedmtdnarenf90.sh", type="output")
+writeLines("#!/bin/bash
+# Correct renf90.par for mtdna
+# first - overwrite line 7 (3 --> 4)           
+awk 'NR==7 {$0=\"    4\"}1' tmp.par > tmp1.par
+rm tmp.par
+
+# Add block text to line 35
+awk 'NR==35 { print \" RANDOM_GROUP|END|4|END|RANDOM_TYPE|END|diagonal|END|FILE|END|            |END|(CO)VARIANCES|END|178605 \" ;}1' tmp1.par > tmp2.par
+rm tmp1.par
+
+# Break into different lines
+sed 's/|END|/\\n/g' tmp2.par > renf90.par
+rm tmp2.par
 ")
 sink()
 
@@ -455,7 +469,7 @@ mtdnaGinv <- function(mtdnaPop, simParam){
 
 # prepare BLUPF90 parameters according to model running
 preparePAR <- function(model = c("PEDstd", "PEDmt", "GENstd", "GENmt")){
-  if(model == "PEDstd"){
+  if(model == "PEDstd" | model == "PEDmt"){
     sink("renumf900.par", type="output")
     writeLines("#renumf90 parametar file
 DATAFILE
@@ -490,91 +504,6 @@ varA
 (CO)VARIANCES_PE
 varPe
 OPTION use_yams
-")
-    sink()
-  }else if(model=="PEDmt"){
-    sink("renumf900.par", type="output")
-    writeLines("#renumf90 parametar file
-DATAFILE
-Blupf901.dat
-TRAITS
-2
-FIELDS_PASSED TO OUTPUT
-1 4 5
-#original_id mtdna_original_id mtdna_order_covariances
-WEIGHT(S)
-
-RESIDUAL_VARIANCE
-varE
-EFFECT
-3 cross alpha
-#lactation order
-EFFECT
-1 cross alpha
-#animal
-RANDOM
-animal
-OPTIONAL
-pe
-FILE
-Blupf90.ped
-PED_DEPTH
-0
-INBREEDING
-pedigree
-(CO)VARIANCES
-varA
-(CO)VARIANCES_PE
-varPe
-EFFECT
-4 cross alpha
-#ml
-RANDOM
-diagonal
-(CO)VARIANCES
-varM
-OPTION use_yams
-")
-    sink()
-  }else if(model=="GENstd"){
-    sink("renumf900.par", type="output")
-    writeLines("#renumf90 parametar file
-DATAFILE
-Blupf901.dat
-TRAITS
-2
-FIELDS_PASSED TO OUTPUT
-1 4 5
-#original_id mtdna_original_id mtdna_order_covariances
-WEIGHT(S)
-
-RESIDUAL_VARIANCE
-varE
-EFFECT
-3 cross alpha
-#lactation order
-EFFECT
-1 cross alpha
-#animal
-RANDOM
-animal
-OPTIONAL
-pe
-FILE
-Blupf90.ped
-SNP_FILE
-snp.dat
-PED_DEPTH
-0
-INBREEDING
-pedigree
-(CO)VARIANCES
-varA
-(CO)VARIANCES_PE
-varPe
-OPTION use_yams
-OPTION no_quality_control
-OPTION thrStopCorAG 0
 ")
     sink()
   }else{

@@ -91,10 +91,7 @@ for(i in (generation+1):((generation+1)+nBreeding)){
   preparePAR(paste0(program, model))
   runRENUM(Records, mt_ref, program, model)
   #varComp(model)
-  Records = runBLUP(Records, if(program=="GEN" & model=="mt"){mt_ref})
-  
-  
-  Records = runBLUP(Records, mtdna_ids = (if(program=="GEN" & model=="mt"){mt_ref}else{NULL}))
+  Records = runBLUP(Records, mtdna_ids = (if(model=="mt"){mt_ref}else{NULL}))
   
   pop$heifers[[1]]@ebv <- as.matrix(with(Records,
                                          if(selection=="baseline"){nEbv[match(pop$heifers[[1]]@id, 
