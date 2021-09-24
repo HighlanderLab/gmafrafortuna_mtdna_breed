@@ -16,8 +16,8 @@ if(program=="GEN"){
     snpData(active)
 }
 
-for(i in (generation+1):((generation+1)+nBreeding)){
-  cat("Breeding generation", i, "...\n",
+for(year in (year+1):((year+1)+nBreeding)){
+  cat("Breeding year", year, "...\n",
       "Program:", program, "Model:", model, "Selection:", selection, "Scenario:", traitScen, "\n")
   
   # define matings for each category:

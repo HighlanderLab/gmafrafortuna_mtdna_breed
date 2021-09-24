@@ -121,10 +121,10 @@ Records = runBLUP(Records)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------ Run Burn-in generations -----------------------------------------------
-for(i in (generation+1):((generation+1)+nBreeding)){
-  cat("Burn-in generation", i, "...\n")
+for(year in 1:nBreeding){
+  cat("Burn-in year:", year, "generation:", generation, "...\n")
   
-  # define matings for each category:
+  # define matting for each category:
   dams <- do.call(c, unlist(pop$eliteDams, recursive = FALSE))
   sires <- do.call(c, unlist(pop$eliteSires, recursive = FALSE))
   testing <- do.call(c, unlist(pop$waitingBulls, recursive = FALSE))

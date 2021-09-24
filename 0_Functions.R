@@ -141,21 +141,21 @@ record.accuracy = function(datafile, pop, recfile, model){
   
   datafile <- rbind(datafile,
                     tibble(Generation = generation,
-                           SelGroup   = category,        
-                           nInd       = pop@nInd,
-                           ids        = list(pop@id),
-                           nEbv       = list(with(recfile, nEbv[match(pop@id, recfile$IId)])),
-                           mEbv       = list(with(recfile, mEbv[match(pop@id, recfile$IId)])),
-                           tEbv       = list(with(recfile, tEbv[match(pop@id, recfile$IId)])),
+                           Breeding_year = year,
+                           SelGroup   = category,  
                            Program    = program,
                            Model      = model,
                            Selop      = selection,
-                           # 1: nTbv vs nEbv - all models
-                           acc_n      = cor(recfile$nTbv, recfile$nEbv),
-                           # 2: mTbv vs mEbv - mt models
-                           acc_m      = if(Model == "mt"){cor(recfile$mTbv, recfile$mEbv)}else{NA},
-                           # 3: tTbv vs tEbv - all models
-                           acc_t      = cor(recfile$tTbv, recfile$tEbv),
+                           nInd       = pop@nInd,
+                           ids        = list(pop@id),
+                           # estimated bv
+                           nEbv       = list(with(recfile, nEbv[match(pop@id, recfile$IId)])),
+                           mEbv       = list(with(recfile, mEbv[match(pop@id, recfile$IId)])),
+                           tEbv       = list(with(recfile, tEbv[match(pop@id, recfile$IId)])),
+                           # true bv
+                           nTbv       = list(with(recfile, nTbv[match(pop@id, recfile$IId)])),
+                           mTbv       = list(with(recfile, mTbv[match(pop@id, recfile$IId)])),
+                           tTbv       = list(with(recfile, tTbv[match(pop@id, recfile$IId)])),
                            # gen & var trends
                            nVar        = varG(pop), # genetic var
                            genicVarN   = genicVarG(pop, SP), # genic var
@@ -173,6 +173,7 @@ record.bias = function(datafile, pop, recfile, model){
   recfile <- recfile %>% filter(IId %in% pop@id)
   datafile <- rbind(datafile,
                     tibble(Generation = generation,
+                           Breeding_year = year,
                            SelGroup   = category,
                            nInd       = pop@nInd,
                            Program    = program,
@@ -208,6 +209,7 @@ runCovars <- function(datafile, recfile, pop){
   
   datafile <- rbind(datafile,
                     tibble(Generation  = generation,
+                           Breeding_year = year,
                            nInd       = pop@nInd,
                            Program    = program,
                            Model      = model,
