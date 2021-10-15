@@ -11,9 +11,8 @@
 # Simulation Parameters ---------------
 # initiate datafiles
 Records <- NULL
-Covars <- NULL
-Accuracy <- NULL
-Bias <- NULL
+genSummary <- NULL
+catSummary <- NULL
 geno.id <- NULL
 
 # Global Parameters ---------------
@@ -124,109 +123,88 @@ recording <- function(datafile, mtdna, pop){
                           gv_corr    = ifelse(Generation < 32, nTbv, 0)))
 }
 
-record.accuracy = function(datafile, pop, recfile, model){
-  recfile <- recfile %>% filter(IId %in% pop@id)
-  
-  # creates mtDNA pop for calculating genic var
-  y <- recfile %>% select(IId, ML)
+
+# Function assign breeding values
+add.ebv <- function(pop, datafile, selection){
+  pop@ebv = as.matrix(with(datafile,
+                           if(unique(pop@sex[]) == "M"){
+                             if(selection == "extreme"){tEbv[match(pop@id,
+                                                                   datafile$IId)]}else{nEbv[match(pop@id,
+                                                                                                  datafile$IId)]}
+                           }else{
+                             if(selection == "baseline"){nEbv[match(pop@id,
+                                                                    datafile$IId)]}else{tEbv[match(pop@id,
+                                                                                                   datafile$IId)]}
+                           }))
+}
+
+# Functions to save information on (i) categories, (ii) new generations
+summarise.category = function(datafile, pop, recfile, mtDNAFullFile){
+  # creates mtDNA pop (matching animal category) for calculating genic var
+  id.ml <- recfile %>% filter(IId %in% pop@id, !(is.na(ML))) %>% select(IId, ML)
   mtDNApop=NULL
-  while(nrow(y) > 0){
-    p <- distinct(y, ML)
-    mtDNApop = c(mtDNApop, selectInd(mtDNAx, nInd=nrow(p), simParam = if(traitScen=="maxQTL"){SP2}else{SP3}, 
-                                     use="rand", candidates = p$ML))
-    y <- y %>% group_by(ML) %>% filter(!(row_number() == 1))
+  while(nrow(id.ml) > 0){
+    ml.list <- distinct(id.ml, ML)
+    mtDNApop = c(mtDNApop,
+                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
+                           use="rand", candidates = ml.list$ML))
+    id.ml <- id.ml %>% group_by(ML) %>% filter(!(row_number() == 1))
   }
   mtDNApop <- mergePops(mtDNApop)
   
-  
-  datafile <- rbind(datafile,
-                    tibble(Generation = generation,
-                           Breeding_year = year,
-                           SelGroup   = category,  
-                           Program    = program,
-                           Model      = model,
-                           Selop      = selection,
-                           nInd       = pop@nInd,
-                           ids        = list(pop@id),
-                           # estimated bv
-                           nEbv       = list(with(recfile, nEbv[match(pop@id, recfile$IId)])),
-                           mEbv       = list(with(recfile, mEbv[match(pop@id, recfile$IId)])),
-                           tEbv       = list(with(recfile, tEbv[match(pop@id, recfile$IId)])),
-                           # true bv
-                           nTbv       = list(with(recfile, nTbv[match(pop@id, recfile$IId)])),
-                           mTbv       = list(with(recfile, mTbv[match(pop@id, recfile$IId)])),
-                           tTbv       = list(with(recfile, tTbv[match(pop@id, recfile$IId)])),
-                           # gen & var trends
-                           nVar        = varG(pop), # genetic var
-                           genicVarN   = genicVarG(pop, SP), # genic var
-                           mVar        = var(recfile$mTbv)*((pop@nInd-1)/pop@nInd), 
-                           genicVarM   = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}), 
-                           tVar        = var(recfile$tTbv)*((pop@nInd-1)/pop@nInd),
-                           genicVarT   = sum(genicVarN, genicVarM),
-                           nMean       = mean(recfile$nTbv),
-                           mMean       = mean(recfile$mTbv),
-                           tMean       = mean(recfile$tTbv)
+  # record information
+  datafile <- rbind(datafile, 
+                    tibble(Breeding_year = year,
+                           Category      = category,
+                           Scenario      = paste0(program, model, selection),
+                           nInd          = pop@nInd,
+                           IIds          = list(pop@id),
+                           nEbv          = list(with(recfile, nEbv[match(pop@id, recfile$IId)])),
+                           mEbv          = list(with(recfile, mEbv[match(pop@id, recfile$IId)])),
+                           tEbv          = list(with(recfile, tEbv[match(pop@id, recfile$IId)])),
+                           genVarN       = varG(pop),
+                           genicVarN     = genicVarG(pop, SP), 
+                           genVarM       = var(with(recfile, mTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
+                           genicVarM     = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}),
+                           genVarT       = var(with(recfile, tTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
+                           genicVarT     = sum(genicVarN, genicVarM)
                     ))
+  return(datafile)
 }
 
-record.bias = function(datafile, pop, recfile, model){
-  recfile <- recfile %>% filter(IId %in% pop@id)
-  datafile <- rbind(datafile,
-                    tibble(Generation = generation,
-                           Breeding_year = year,
-                           SelGroup   = category,
-                           nInd       = pop@nInd,
-                           Program    = program,
-                           Model      = model,
-                           Selop      = selection,
-                           # 1: nTbv vs nEbv - all models
-                           b0_n       = lm(gv_corr~nEbv, recfile)$coefficients[[1]],
-                           b1_n       = lm(gv_corr~nEbv, recfile)$coefficients[[2]],
-                           # 2: mTbv vs mEbv - mt models
-                           b0_m       = ifelse(Model == "mt",
-                                               lm(mTbv~mEbv, recfile)$coefficients[[1]], NA),
-                           b1_m       = ifelse(Model == "mt",
-                                               lm(mTbv~mEbv, recfile)$coefficients[[2]], NA),
-                           # 3: tTbv vs tEbv - all models
-                           b0_t       = lm((mTbv + gv_corr)~tEbv, recfile)$coefficients[[1]],
-                           b1_t       = lm((mTbv + gv_corr)~tEbv, recfile)$coefficients[[2]],
-                    ))
-}
-
-runCovars <- function(datafile, recfile, pop){
-  recfile <- recfile %>% filter(IId %in% pop@id)
-  
-  # creates mtDNA pop for calculating genic var
-  y <- recfile %>% select(IId, ML)
+summarise.generation = function(datafile, pop, recfile, mtDNAFullFile){
+  # creates mtDNA pop (matching animal category) for calculating genic var
+  id.ml <- recfile %>% filter(Generation == generation) %>% select(IId, ML)
   mtDNApop=NULL
-  while(nrow(y) > 0){
-    p <- distinct(y, ML)
-    mtDNApop = c(mtDNApop, selectInd(mtDNAx, nInd=nrow(p), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
-                                     use="rand", candidates = p$ML))
-    y <- y %>% group_by(ML) %>% filter(!(row_number() == 1))
+  while(nrow(id.ml) > 0){
+    ml.list <- distinct(id.ml, ML)
+    mtDNApop = c(mtDNApop,
+                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
+                           use="rand", candidates = ml.list$ML))
+    id.ml <- id.ml %>% group_by(ML) %>% filter(!(row_number() == 1))
   }
   mtDNApop <- mergePops(mtDNApop)
   
-  datafile <- rbind(datafile,
-                    tibble(Generation  = generation,
-                           Breeding_year = year,
-                           nInd       = pop@nInd,
-                           Program    = program,
-                           Model      = model,
-                           Selop      = selection,
-                           result      = cor(recfile$nTbv, recfile$mTbv),
-                           nVar        = var(recfile$nTbv)*((nrow(recfile)-1)/nrow(recfile)),
-                           genicVarN   = genicVarG(pop, SP),
-                           mVar        = var(recfile$mTbv)*((nrow(recfile)-1)/nrow(recfile)),
-                           genicVarM   = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}),
-                           tVar        = var(recfile$tTbv)*((nrow(recfile)-1)/nrow(recfile)),
-                           genicVarT   = sum(genicVarN, genicVarM),
-                           nMean       = mean(recfile$nTbv),
-                           mMean       = mean(recfile$mTbv),
-                           tMean       = mean(recfile$tTbv),
-                           ML          = sum(!duplicated(recfile$ML) & !is.na(recfile$ML))
+  # record information
+  datafile <- rbind(datafile, 
+                    tibble(Generation    = generation,
+                           Scenario     = paste0(program, model, selection),
+                           IIds          = list(pop@id),
+                           nEbv          = list(with(recfile, nEbv[match(pop@id, recfile$IId)])),
+                           mEbv          = list(with(recfile, mEbv[match(pop@id, recfile$IId)])),
+                           tEbv          = list(with(recfile, tEbv[match(pop@id, recfile$IId)])),
+                           genVarN       = varG(pop),
+                           genicVarN     = genicVarG(pop, SP), 
+                           genVarM       = var(with(recfile, mTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
+                           genicVarM     = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}),
+                           genVarT       = var(with(recfile, tTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
+                           genicVarT     = sum(genicVarN, genicVarM)
+                           
+                           
                     ))
-} 
+  return(datafile)
+}
+
 
 # RENUMF90 function
 runRENUM = function(datafile, mtdna_ids, program, model){

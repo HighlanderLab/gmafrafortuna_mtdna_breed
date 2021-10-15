@@ -121,10 +121,12 @@ Records = runBLUP(Records)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------ Run Burn-in generations -----------------------------------------------
-for(year in 1:nBreeding){
-  cat("Burn-in year:", year, "generation:", generation, "...\n")
+year = 0
+nBreeding = 20
+for(year in (year+1):(year+nBreeding)){
+  cat("Breeding year:", year, "generation:", generation, "...\n")
   
-  # define matting for each category:
+  # define matting groups for each category:
   dams <- do.call(c, unlist(pop$eliteDams, recursive = FALSE))
   sires <- do.call(c, unlist(pop$eliteSires, recursive = FALSE))
   testing <- do.call(c, unlist(pop$waitingBulls, recursive = FALSE))
@@ -148,24 +150,28 @@ for(year in 1:nBreeding){
   
   cat("Waiting bull progeny =", mean(table(pop$heifers[[4]]@father)), "\n")
   
+  # Genotype new pop
+  if(program=="GEN"){
+    cat("Generating updated snp file...\n")
+    snpData(c(pop$youngBulls[[3]], pop$heifers[[4]][pop$heifers[[4]]@mother %in% dams@id]))
+    
+    geno.id <- c(geno.id, 
+                 pop$heifers[[4]][pop$heifers[[4]]@mother %in% dams@id]@id)
+  }
+  
   # Update year's records
   generation = generation + 1
   Records <- recording(Records, mtfile, 
                        c(pop$youngBulls[[3]], pop$heifers[[4]]))
-  Covars <- runCovars(Covars, Records, 
-                      c(pop$youngBulls[[3]], pop$heifers[[4]]))
   
   # Pre-test: select young males to enter progeny testing
-  pop$youngBulls[[1]]@ebv <- as.matrix(with(Records, 
-                                            nEbv[match(pop$youngBulls[[1]]@id, 
-                                                       Records$IId)]))
+  pop$youngBulls[[1]]@ebv <- add.ebv(pop$youngBulls[[1]], Records, selection)
   # assign breeding values to be able to select
   
   category = "young_bulls"
-  Accuracy <- record.accuracy(Accuracy, 
-                              pop$youngBulls[[1]], Records, model)
+  catSummary <- summarise.category(catSummary, pop$youngBulls[[1]], Records, mtDNAx)
   youngbulls <- pop$youngBulls[[1]]
-  # estimate accuracy
+  # record summary for category
   
   pop$waitingBulls <- c(pop$waitingBulls,
                         selectInd(pop$youngBulls[[1]], nWaitingBulls, use="ebv"))
@@ -187,43 +193,43 @@ for(year in 1:nBreeding){
   runRENUM(Records, mt_ref, program, model)
   Records = runBLUP(Records)
   
-  pop$heifers[[1]]@ebv <- as.matrix(with(Records, 
-                                         nEbv[match(pop$heifers[[1]]@id, 
-                                                    Records$IId)]))
+  genSummary <- summarise.generation(genSummary, c(pop$youngBulls[[2]], pop$heifers[[4]]), Records, mtDNAx)
   
+  pop$heifers[[1]]@ebv <- add.ebv(pop$heifers[[1]], Records, selection)
   # assign breeding values to be able to select
   
-  category <- "heifers"
-  Accuracy <- record.accuracy(Accuracy,
-                              pop$heifers[[2]], Records, model)
-  Bias <- record.bias(Bias,
-                      pop$heifers[[2]], Records, model)
-  category <- "1st_lact"
-  Accuracy <- record.accuracy(Accuracy,
-                              pop$heifers[[1]], Records, model)
-  category <- "cows"
-  Accuracy <- record.accuracy(Accuracy, 
-                              c(dams, multiplier), Records, model)
-  Bias <- record.bias(Bias,
-                      c(pop$heifers[[1]], dams, multiplier), Records, model)
-  # estimate accuracies
+  categories <- if(program == "GEN"){
+    c("heifers_geno", "heifers_no_geno", "1st_lact_geno", "1st_lact_no_geno", "cows_geno", "cows_no_geno", "proven_bulls")
+  }else{c("heifers", "1st_lact", "cows", "proven_bulls")}
+  
+  agroups <- if(program == "GEN"){
+    list(pop$heifers[[2]][pop$heifers[[2]]@id %in% geno.id], pop$heifers[[2]][!(pop$heifers[[2]]@id %in% geno.id)],
+         pop$heifers[[1]][pop$heifers[[1]]@id %in% geno.id], pop$heifers[[1]][!(pop$heifers[[1]]@id %in% geno.id)],
+         c(dams, multiplier)[c(dams, multiplier)@id %in% geno.id], c(dams, multiplier)[!(c(dams, multiplier)@id %in% geno.id)],
+         pop$waitingBulls[[1]])
+  }else{list(pop$heifers[[2]], pop$heifers[[1]], c(dams, multiplier), pop$waitingBulls[[1]])}
+  
+  for(i in 1:length(agroups)){
+    if(agroups[[i]]@nInd !=0){
+      category = categories[i]
+      catSummary <- summarise.category(catSummary, agroups[[i]], Records, mtDNAx)
+    }
+  }
+  # record summary for category
   
   # moving categories
   for(j in 2:4){
-    pop$eliteDams[[j]]@ebv <- as.matrix(with(Records, 
-                                             nEbv[match(pop$eliteDams[[j]]@id, 
-                                                        Records$IId)]))
-    pop$commercial[[j]]@ebv <- as.matrix(with(Records, 
-                                              nEbv[match(pop$commercial[[j]]@id, 
-                                                         Records$IId)]))
     # assign ebvs
+    pop$eliteDams[[j]]@ebv <- add.ebv(pop$eliteDams[[j]], Records, selection)
+    pop$commercial[[j]]@ebv <- add.ebv(pop$commercial[[j]], Records, selection)
+    
+    # select best females
     pop$eliteDams[[j]] <- selectInd(pop$eliteDams[[j]],
                                     nInd = (1-cullRate)*pop$eliteDams[[j]]@nInd,
                                     use="ebv")
     pop$commercial[[j]] <- selectInd(pop$commercial[[j]],
                                      nInd = (1-cullRate)*pop$commercial[[j]]@nInd, 
                                      use="ebv")
-    # select best females
   }
   # females move up one age group and 30% are culled every year
   
@@ -254,19 +260,8 @@ for(year in 1:nBreeding){
   # update data file: culled cows are "removed"
   
   # End of progeny-testing: best bulls are selected on EBV
-  pop$waitingBulls[[1]]@ebv <- as.matrix(with(Records, 
-                                              nEbv[match(pop$waitingBulls[[1]]@id, 
-                                                         Records$IId)]))
+  pop$waitingBulls[[1]]@ebv <- add.ebv(pop$waitingBulls[[1]], Records, selection)
   # assign ebv to be able to select
-  
-  category <- "proven_bulls"
-  Accuracy <- record.accuracy(Accuracy,
-                              pop$waitingBulls[[1]], Records, model)
-  category <- "males"
-  Bias <- record.bias(Bias, 
-                      c(youngbulls,
-                        pop$waitingBulls[[1]]), Records, model)
-  # estimate accuracy
   
   pop$eliteSires <- c(pop$eliteSires,
                       selectInd(pop$waitingBulls[[1]], nInd = nEliteSires, 
@@ -310,9 +305,9 @@ s <- c(sd(Records$nTbv[Records$Generation == (generation - nBreeding)]),
        sd(Records$mTbv[Records$Generation == (generation - nBreeding)]),
        sd(Records$tTbv[Records$Generation == (generation - nBreeding)]))
 # estimate sd for first observation for each genome
-Bias <- Bias %>% mutate(b0_n = b0_n/s[1],
-                        b0_m = b0_m/s[2],
-                        b0_t = b0_t/s[3])
+#Bias <- Bias %>% mutate(b0_n = b0_n/s[1],
+#                        b0_m = b0_m/s[2],
+#                        b0_t = b0_t/s[3])
 # divide b0 results by sd
 
 # save data
