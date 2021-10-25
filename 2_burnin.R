@@ -191,7 +191,7 @@ for(year in (year+1):(year+nBreeding)){
   # run evaluation
   preparePAR(paste0(program, model))
   runRENUM(Records, mt_ref, program, model)
-  Records = runBLUP(Records)
+  Records = runBLUP(Records, if(model == "mt"){mtdna_ids= mt_ref})
   
   genSummary <- summarise.generation(genSummary, c(pop$youngBulls[[2]], pop$heifers[[4]]), Records, mtDNAx)
   
