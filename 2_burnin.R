@@ -6,10 +6,12 @@
 # ------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------- create mt population depending on trait scenario -----------------------------------
 cat("Generating mitochondrial pop ", traitScen, "\n")
-mtDNA <- newPop(mtDNA, simParam = if(traitScen=="maxQTL"){SP2}else{SP3})
+if(traitScen == "maxQTL"){param = SP2}else{param = SP3}
+
+mtDNA <- newPop(mtDNA, simParam = param)
 
 # Store haplotypes, define maternal lineages and haplogroups
-mtfile <- as.matrix(pullSegSiteHaplo(mtDNA, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}))
+mtfile <- as.matrix(pullSegSiteHaplo(mtDNA, simParam = param))
 mtfile <- as_tibble(mtfile)
 mtfile <- mtfile %>% unite(haplotype, 1:length(mtfile), sep="")
 mtfile <- mtfile %>% add_column(ML = mtDNA@id,
@@ -18,13 +20,13 @@ mtfile <- mtfile %>% add_column(ML = mtDNA@id,
 
 mtDNAx <- mtDNA
 # save original pop
-mtDNA <- selectInd(mtDNA, nInd = nrow(mtfile), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
+mtDNA <- selectInd(mtDNA, nInd = nrow(mtfile), simParam = param,
                    candidates = mtfile$ML, use="rand")
 
 # Generate mtDNA inverse matrix based on trait scenario
 cat("Generating mtDNA inverse matrix...\n")
 mt_ref = NULL
-mtdnaGinv(mtDNA, if(traitScen=="maxQTL"){SP2}else{SP3})
+mtdnaGinv(mtDNA, param)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------- Fill in animal categories ----------------------------------------------

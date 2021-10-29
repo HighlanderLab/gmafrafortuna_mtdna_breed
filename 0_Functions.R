@@ -143,10 +143,11 @@ summarise.category = function(datafile, pop, recfile, mtDNAFullFile){
   # creates mtDNA pop (matching animal category) for calculating genic var
   id.ml <- recfile %>% filter(IId %in% pop@id, !(is.na(ML))) %>% select(IId, ML)
   mtDNApop=NULL
+  if(traitScen=="maxQTL"){param=SP2}else{param=SP3}
   while(nrow(id.ml) > 0){
     ml.list <- distinct(id.ml, ML)
     mtDNApop = c(mtDNApop,
-                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
+                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = param,
                            use="rand", candidates = ml.list$ML))
     id.ml <- id.ml %>% group_by(ML) %>% filter(!(row_number() == 1))
   }
@@ -165,7 +166,7 @@ summarise.category = function(datafile, pop, recfile, mtDNAFullFile){
                            genVarN       = varG(pop),
                            genicVarN     = genicVarG(pop, SP), 
                            genVarM       = var(with(recfile, mTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
-                           genicVarM     = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}),
+                           genicVarM     = genicVarG(mtDNApop, simParam = param),
                            genVarT       = var(with(recfile, tTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
                            genicVarT     = sum(genicVarN, genicVarM)
                     ))
@@ -176,10 +177,11 @@ summarise.generation = function(datafile, pop, recfile, mtDNAFullFile){
   # creates mtDNA pop (matching animal category) for calculating genic var
   id.ml <- recfile %>% filter(Generation == generation) %>% select(IId, ML)
   mtDNApop=NULL
+  if(traitScen=="maxQTL"){param=SP2}else{param=SP3}
   while(nrow(id.ml) > 0){
     ml.list <- distinct(id.ml, ML)
     mtDNApop = c(mtDNApop,
-                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = if(traitScen=="maxQTL"){SP2}else{SP3},
+                 selectInd(mtDNAFullFile, nInd = nrow(ml.list), simParam = param,
                            use="rand", candidates = ml.list$ML))
     id.ml <- id.ml %>% group_by(ML) %>% filter(!(row_number() == 1))
   }
@@ -196,7 +198,7 @@ summarise.generation = function(datafile, pop, recfile, mtDNAFullFile){
                            genVarN       = varG(pop),
                            genicVarN     = genicVarG(pop, SP), 
                            genVarM       = var(with(recfile, mTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
-                           genicVarM     = genicVarG(mtDNApop, simParam = if(traitScen=="maxQTL"){SP2}else{SP3}),
+                           genicVarM     = genicVarG(mtDNApop, simParam = param),
                            genVarT       = var(with(recfile, tTbv[match(pop@id, recfile$IId)]))*((pop@nInd-1)/pop@nInd),
                            genicVarT     = sum(genicVarN, genicVarM)
                            
