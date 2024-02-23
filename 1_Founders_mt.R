@@ -1,10 +1,12 @@
-# Evaluation of the impact of accounting for mitochondrial variation on breeding values estimation for dairy cattle
+# Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
 # Gabriela Mafra Fortuna
 # Highlander Lab
 # The Roslin Institute 
 # July 2020 - updated Aug 2021
+
 # ------------------------------------------------------------------------------------------------------------------------
-# ---------------------------------- Generate initial haplotypes & nuclear founder pop ----------------------------------- 
+# ---------------------------------- Generate initial haplotypes & nuclear founder pop -----------------------------------
+
 # ---------------------------------- Nuclear ----------------------------------- 
 cat("Simulating nuclear haplotypes...\n")
 FOUNDERPOP <- runMacs(nInd = nFem*2,
