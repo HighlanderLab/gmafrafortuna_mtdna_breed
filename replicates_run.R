@@ -1,6 +1,8 @@
 # Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
-# The Roslin Institute
-# Since July 2020
+# Gabriela Mafra Fortuna
+# Highlander Lab
+# The Roslin Institute 
+# July 2020 - updated Aug 2021
 # Execution script: run burn-in plus 4 evaluation scenarios with replicates
 
 # Simulating four breeding scenarios, two trait scenarios (mt causal loci)
