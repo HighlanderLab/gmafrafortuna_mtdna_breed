@@ -1,14 +1,13 @@
-# mtDNA Project: Should mitochondrial variation be accounted for on BVE
-# Dairy Cattle Breeding Simulations
-# Roslin Institute
-# from July 2020
-# Execution script: run  burn-in plus 4 evaluation scenarios with replicates
-# Using same breeding Scheme (PTBS) but selecting on genomic values 
+# Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
+# The Roslin Institute
+# Since July 2020
+# Execution script: run burn-in plus 4 evaluation scenarios with replicates
 
 # Simulating four breeding scenarios, two trait scenarios (mt causal loci)
 # - breeding scenarios: PBLUP | mtPBLUP | GBLUP | mtGBLUP
 # - trait scenarios: all loci are causal | 1 locous is causal
-
+# We are using the same breeding scheme but selecting on pedigree-based or genome-based
+# estimated breeding values 
 
 rm(list=ls())
 # load packages
@@ -20,6 +19,8 @@ library(Matrix)
 #     maxQTL -> all segSites are causal
 #     minQTL -> 1 segSite is causal
 
+scriptsDir = "/home/v1gfortu/scripts/"
+
 rep = 10
 
 for(run in 1:rep){
@@ -27,12 +28,12 @@ for(run in 1:rep){
     if(ts == 1){
       
       # load functions
-      source("/home/v1gfortu/scripts/0_Functions.R")
+      source(paste0(scriptsDir, "0_Functions.R"))
       
       cat("All segregating sites are causal \n")
       traitScen = "maxQTL"
       
-      source("/home/v1gfortu/scripts/1_Founders_mt.R")
+      source(paste0(scriptsDir, "1_Founders_mt.R"))
       
     }else{
       load("founders.RData")
@@ -72,7 +73,7 @@ for(run in 1:rep){
     }
     
     # Generate base population
-    source("/home/v1gfortu/scripts/2_burnin.R")
+    source(paste0(scriptsDir, "2_burnin.R"))
 
     # Breeding Scenarios
     # (1) Standard Progeny-Testing:
@@ -84,7 +85,7 @@ for(run in 1:rep){
     program = "PED"
     model = "std"
     
-    source("/home/v1gfortu/scripts/3_BreedScheme.R")
+    source(paste0(scriptsDir, "3_BreedScheme.R"))
     # save data
     rm(list=setdiff(ls(), c("Accuracy", "Covars", "model", "program", "traitScen", "run", "ts")))
     assign(paste0("acc_",model, program, traitScen, run), Accuracy); rm(Accuracy)
@@ -101,7 +102,7 @@ for(run in 1:rep){
     program = "PED"
     model = "mt"
     
-    source("/home/v1gfortu/scripts/3_BreedScheme.R")
+    source(paste0(scriptsDir, "3_BreedScheme.R"))
     # save data
     rm(list=setdiff(ls(), c("Accuracy", "Covars", "model", "program", "traitScen", "run", "ts")))
     assign(paste0("acc_",model, program, traitScen, run), Accuracy); rm(Accuracy)
@@ -127,7 +128,7 @@ for(run in 1:rep){
     # create training population considering all males and random females
     snpData(active)
     
-    source("/home/v1gfortu/scripts/3_BreedScheme.R")
+    source(paste0(scriptsDir, "3_BreedScheme.R"))
     # save data
     rm(list=setdiff(ls(), c("Accuracy", "Covars", "model", "program", "traitScen", "run", "ts")))
     assign(paste0("acc_",model, program, traitScen, run), Accuracy); rm(Accuracy)
@@ -154,7 +155,7 @@ for(run in 1:rep){
     # create training population considering all males and random females
     snpData(active)
     
-    source("/home/v1gfortu/scripts/3_BreedScheme.R")
+    source(paste0(scriptsDir, "3_BreedScheme.R"))
     # save data
     rm(list=setdiff(ls(), c("Accuracy", "Covars", "model", "program", "traitScen", "run", "ts")))
     assign(paste0("acc_",model, program, traitScen, run), Accuracy); rm(Accuracy)
