@@ -1,4 +1,4 @@
-# Evaluation of the impact of accounting for mitochondrial variation on breeding values estimation for dairy cattle
+# Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
 # Gabriela Mafra Fortuna
 # Highlander Lab
 # The Roslin Institute 
@@ -83,8 +83,7 @@ recording <- function(datafile, mtdna, pop){
     mt = with(mtdna, mTbv[match(id, mtdna$ML)])
     id = c(sapply(id, function(id) c(rep(NA, 1), id)))
     mt = c(sapply(mt, function(mt) c(rep(0, 1), mt)))
-    }
-  
+  }
   
   datafile = rbind(datafile,
                    tibble(Generation = generation,
@@ -122,7 +121,6 @@ recording <- function(datafile, mtdna, pop){
 
                           gv_corr    = ifelse(Generation < 32, nTbv, 0)))
 }
-
 
 # Function assign breeding values
 add.ebv <- function(pop, datafile, selection){
@@ -206,7 +204,6 @@ summarise.generation = function(datafile, pop, recfile, mtDNAFullFile){
                     ))
   return(datafile)
 }
-
 
 # RENUMF90 function
 runRENUM = function(datafile, mtdna_ids, program, model){
@@ -447,7 +444,6 @@ mtdnaGinv <- function(mtdnaPop, simParam){
   # this will deal with the correction of ML_ids during BLUP estimations
   mt_ref <<- tibble(mt_id = rownames(Z), mt_new_id = seq(1:length(mt_id)))
 }
-
 
 # prepare BLUPF90 parameters according to model running
 preparePAR <- function(model = c("PEDstd", "PEDmt", "GENstd", "GENmt")){
