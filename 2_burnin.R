@@ -1,10 +1,12 @@
-# Evaluation of the impact of accounting for mitochondrial variation on breeding values estimation for dairy cattle
+# Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
 # Gabriela Mafra Fortuna
 # Highlander Lab
 # The Roslin Institute 
 # July 2020 - updated Aug 2021
+
 # ------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------- create mt population depending on trait scenario -----------------------------------
+
 cat("Generating mitochondrial pop ", traitScen, "\n")
 if(traitScen == "maxQTL"){param = SP2}else{param = SP3}
 
@@ -30,6 +32,7 @@ mtdnaGinv(mtDNA, param)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------- Fill in animal categories ----------------------------------------------
+
 generation = 0
 program = "PED"
 model = "std"
@@ -274,8 +277,10 @@ for(year in (year+1):(year+nBreeding)){
   # non-selected candidates are culled. Sires used for 5 years are culled. 
   
 }
+
 # ------------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------- Reference population for Genetic models ---------------------------------------
+
 # combine active population per category for genotyping
 dams <- do.call(c, unlist(pop$eliteDams))
 # All elite dams are genotyped (3165)
@@ -316,15 +321,6 @@ s <- c(sd(Records$nTbv[Records$Generation == (generation - nBreeding)]),
 Records <- Records %>% filter(Generation >= generation-10)
 Records <- Records %>% mutate(gv_corr = nTbv - mean(nTbv))
 gv <- mean(Records$nTbv)
-
-
-
-
-
-
-
-
-
 
 
 
