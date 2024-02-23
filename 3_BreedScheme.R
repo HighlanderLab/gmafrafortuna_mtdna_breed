@@ -1,10 +1,12 @@
-# Evaluation of the impact of accounting for mitochondrial variation on breeding values estimation for dairy cattle
+# Accounting for nuclear - and mito-genome in dairy cattle breeding: a simulation study
 # Gabriela Mafra Fortuna
 # Highlander Lab
 # The Roslin Institute 
 # July 2020 - updated Aug 2021
+
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------ Run Breeding Programme -----------------------------------------------
+
 ids <- NULL
 
 # Generate parameter file for BLUPF90
@@ -165,6 +167,7 @@ for(year in (year+1):(year+nBreeding)){
   # non-selected candidates are culled. Sires used for 5 years are culled. 
   
 }
+
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------ Correct scales for bias estimation ------------------------------------------ 
 
