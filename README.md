@@ -1,4 +1,4 @@
-# gfortuna_mtdna_breed
+# gmafrafortuna_mtdna_breed
 
 A simulation study using AlphaSimR to simulate both nuclear and mitochondrial genomes
 in the context of a dairy cattle breeding programme. The study looks at how accountning
