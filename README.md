@@ -6,15 +6,19 @@ for nuclear and mitochondrial genome variation in estmation of breeding values a
 impacts the accuracy of estimation and the magnitude of response to selection.
 
 This study was initiated as an intership of Gabriela Mafra Fortuna during her MSc in Animal
-Breeding and Genetics, which then became her MSc thesis, and finally the following manuscript.
+Breeding and Genetics, which then became her MSc thesis, and finally the following paper.
 
 ```
-@article{MafraFortuna2023Accounting,
-  title = {Accounting for nuclear and mito genome in dairy cattle breeding-a simulation study},
+@article{MafraFortuna2024Accounting,
+  title = {Accounting for the nuclear and mito genome in dairy cattle breeding - a simulation study},
   author = {Mafra Fortuna, Gabriela and Zumbach, Birgit Jutta and Johnsson, Martin and Pocrnic, Ivan and Gorjanc, Gregor},
-  year = {2023},
-  journal = {bioRxiv},
-  doi = {10.1101/2023.11.20.567907}
+  journal = {JDS Communications},
+  year = {2024},
+  volume = {5],
+  number = {6},
+  pages = {572--576}
+  doi = {10.3168/jdsc.2023-0522},
+  url = {https://doi.org/10.3168/jdsc.2023-0522}
 }
 ```
 
