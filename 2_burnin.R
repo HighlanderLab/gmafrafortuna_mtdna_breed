@@ -321,7 +321,7 @@ s <- c(sd(Records$nTbv[Records$Generation == (generation - nBreeding)]),
 Records <- Records %>% filter(Generation >= generation-10)
 Records <- Records %>% mutate(gv_corr = nTbv - mean(nTbv))
 gv <- mean(Records$nTbv)
-
+save.image(file="burnin.RData")
 
 
 
